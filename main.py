@@ -90,69 +90,50 @@ assert response_bits[:16] == request_bits[:16]
 if SWITCH_MSB:
     response_bits = "0" + response_bits[1:]
 
+
+def slice(start, size, as_int=True, increment_start=True):
+    """return slice either as bits string or int, and new/current start"""
+    bits = response_bits[start : start + size]
+    if increment_start:
+        start += size
+    if as_int:
+        return int(bits, 2), start
+    return bits, start
+
+
 # id, flags
-start, size = 0, 16
-ID = int(response_bits[start:size], 2)
+start = 0
+ID, start = slice(start, 16)
 assert ID == 22
-start += size
 
-size = 1
-qr = response_bits[start : start + size]
+qr, start = slice(start, 1, as_int=False)
 assert qr == "1"
-start += size
 
-size = 4
-opcode = response_bits[start : start + size]
-start += size
+opcode, start = slice(start, 4, as_int=False)
 assert opcode == "0000"
 
-size = 1
-aa = response_bits[start : start + size]
-start += size
+aa, start = slice(start, 1, as_int=False)
+tc, start = slice(start, 1, as_int=False)
+rd, start = slice(start, 1, as_int=False)
+ra, start = slice(start, 1, as_int=False)
+z, start = slice(start, 3, as_int=False)
+rcode, start = slice(start, 4, as_int=False)
 
-size = 1
-tc = response_bits[start : start + size]
-start += size
-
-size = 1
-rd = response_bits[start : start + size]
-start += size
-
-size = 1
-ra = response_bits[start : start + size]
-start += size
-
-size = 3
-z = response_bits[start : start + size]
-start += size
-
-size = 4
-rcode = response_bits[start : start + size]
-start += size
-
-print(f"{ID=}")
-print(f"{qr=}")
-print(f"{opcode=}")
-print(f"{aa=}")
-print(f"{tc=}")
-print(f"{rd=}")
-print(f"{ra=}")
-print(f"{z=}")
-print(f"{rcode=}")
+# print(f"{ID=}")
+# print(f"{qr=}")
+# print(f"{opcode=}")
+# print(f"{aa=}")
+# print(f"{tc=}")
+# print(f"{rd=}")
+# print(f"{ra=}")
+# print(f"{z=}")
+# print(f"{rcode=}")
 
 # counts
-size = 16
-qdcount = int(response_bits[start : start + size], 2)
-start += size
-
-ancount = int(response_bits[start : start + size], 2)
-start += size
-
-nscount = int(response_bits[start : start + size], 2)
-start += size
-
-arcount = int(response_bits[start : start + size], 2)
-start += size
+qdcount, start = slice(start, 16)
+ancount, start = slice(start, 16)
+nscount, start = slice(start, 16)
+arcount, start = slice(start, 16)
 
 print(f"{qdcount=}")
 print(f"{ancount=}")
@@ -160,113 +141,88 @@ print(f"{nscount=}")
 print(f"{arcount=}")
 
 # question
-size = 8
 qname = []
 while True:
-    length_octet = int(response_bits[start : start + size], 2)
-    start += size
-    print(f"{length_octet=}")
+    length_octet, start = slice(start, 8)
+    # print(f"{length_octet=}")
     # null label is 0-length octet
     if length_octet == 0:
         break
     for _ in range(length_octet):
-        char = chr(int(response_bits[start : start + size], 2))
-        print(char)
-        start += size
+        ordinal, start = slice(start, 8)
+        char = chr(ordinal)
+        # print(char)
         qname.append(char)
     qname.append(".")
 qname = "".join(qname).rstrip(".")
 
-size = 16
-qtype = int(response_bits[start : start + size], 2)
-start += size
-
-qclass = int(response_bits[start : start + size], 2)
-start += size
+qtype, start = slice(start, 16)
+qclass, start = slice(start, 16)
 
 print(f"{qname=}")
 print(f"{qtype=}")
 print(f"{qclass=}")
 
-
 # answer
 for _ in range(ancount):
     # pointer
     size = 2
-    if response_bits[start : start + size] == "11":
-        prefix = response_bits[start : start + size]
-        start += size
-        size = 14
-        offset = int(response_bits[start : start + size], 2)
+    prefix, start = slice(start, 2, as_int=False, increment_start=False)
+    if prefix == "11":
+        prefix, start = slice(start, 2, as_int=False)
+        offset, start = slice(start, 14)
         print(f"{offset=}")
-        start += size
 
         # name + pointer
         another_start = offset * 8
-        size = 8
         name = []
         while True:
-            length_octet = int(response_bits[another_start : another_start + size], 2)
-            another_start += size
-            print(f"{length_octet=}")
+            length_octet, another_start = slice(another_start, 8)
+            # print(f"{length_octet=}")
             # null label is 0-length octet
             if length_octet == 0:
                 break
             for _ in range(length_octet):
-                char = chr(int(response_bits[another_start : another_start + size], 2))
-                print(char)
-                another_start += size
+                ordinal, another_start = slice(another_start, 8)
+                char = chr(ordinal)
+                # print(char)
                 name.append(char)
             name.append(".")
         name = "".join(name).rstrip(".")
         print(f"{name=}")
     else:
         # name
-        size = 8
         name = []
         while True:
-            length_octet = int(response_bits[start : start + size], 2)
-            start += size
-            print(f"{length_octet=}")
+            length_octet, start = slice(start, 8)
+            # print(f"{length_octet=}")
             # null label is 0-length octet
             if length_octet == 0:
                 break
             for _ in range(length_octet):
-                char = chr(int(response_bits[start : start + size], 2))
-                print(char)
-                start += size
+                ordinal, start = slice(start, 8)
+                char = chr(ordinal)
+                # print(char)
                 name.append(char)
             name.append(".")
         name = "".join(name).rstrip(".")
         print(f"{name=}")
 
-    size = 16
-    type_ = int(response_bits[start : start + size], 2)
-    start += size
-
-    class_ = int(response_bits[start : start + size], 2)
-    start += size
-
-    size = 32
-    ttl = int(response_bits[start : start + size], 2)
-    start += size
-
-    size = 16
-    rdlength = int(response_bits[start : start + size], 2)
-    start += size
+    type_, start = slice(start, 16)
+    class_, start = slice(start, 16)
+    ttl, start = slice(start, 32)
+    rdlength, start = slice(start, 16)
 
     rdata = []
     for _ in range(rdlength):
-        size = 8
-        n = int(response_bits[start : start + size], 2)
+        n, start = slice(start, 8)
         rdata.append(n)
-        start += size
     rdata = ".".join(map(str, rdata))
 
     print(f"{name=}")
-    print(f"{type_=}")
-    print(f"{class_=}")
-    print(f"{ttl=}")
+    # print(f"{type_=}")
+    # print(f"{class_=}")
+    # print(f"{ttl=}")
     print(f"{rdlength=}")
     print(f"{rdata=}")
 
